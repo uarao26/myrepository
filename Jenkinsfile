@@ -1,30 +1,22 @@
-pipeline {
-    agent {
-        docker {
-            image 'maven:3-alpine'
-            args '-v /root/.m2:/root/.m2'
-        }
-    }
-    stages {
-        stage('Build') {
-            steps {
-                sh 'mvn -B -DskipTests clean package'
-            }
-        }
-        stage('Test') {
-            steps {
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
-                }
-            }
-        }
-        stage('Deliver') {
-            steps {
-                sh './jenkins/scripts/deliver.sh'
-            }
-        }
-    }
+node('node'){
+    stage 'Checkout'
+         checkout scm
+    stage 'Test'
+        env.NODE_ENV = "test"
+        print "Environment will be : ${env.NODE_ENV}"
+        sh 'node -v'
+        sh 'npm install'
+        sh 'npm test'
+    stage 'Build Docker'
+        sh './dockerBuild.sh'
+    stage 'Deploy'
+         echo 'Push to Repo'
+         sh './dockerPushToRepo.sh'
+    stage 'Cleanup'
+         sh 'rm node_modules -rf'
+         mail body: 'project build successful',
+                     from: 'uarao26@gmail.com',
+                     replyTo: 'uarao26@gmail.com',
+                     subject: 'project build successful',
+             }
 }
